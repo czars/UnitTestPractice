@@ -17,15 +17,15 @@ class PlaySnakeView: UIView {
     static let width: CGFloat = 40.0
     static let height: CGFloat = 40.0
 
-    var viewModel: PlaySnakeViewModel
+    var viewModel: PlaySnakeViewModelType
     var rectWidth = 0
     var rectHeight = 0
     weak var delegate: PlaySnakeViewDelegate?
 
-    init(with viewModel: PlaySnakeViewModel) {
+    init(with viewModel: PlaySnakeViewModelType) {
         self.viewModel = viewModel
         super.init(frame: .zero)
-        self.viewModel.delegate = self
+        self.viewModel.inputs.setSnakeViewDelegate(target: self)
         rectWidth = Int(UIScreen.main.bounds.width / PlaySnakeView.width)
         rectHeight = Int(UIScreen.main.bounds.width / PlaySnakeView.height)
     }
@@ -43,18 +43,18 @@ class PlaySnakeView: UIView {
 }
 
 extension PlaySnakeView: PlaySnakeViewModelDelegate {
-    func refreshPlayView(_ playSnakeViewModel: PlaySnakeViewModel) {
+    func refreshPlayView(_ playSnakeViewModel: PlaySnakeViewModelType) {
         self.setNeedsDisplay()
     }
 
-    func endPlay(_ playSnakeViewModel: PlaySnakeViewModel) {
+    func endPlay(_ playSnakeViewModel: PlaySnakeViewModelType) {
         delegate?.endPlay(self)
     }
 }
 
 private extension PlaySnakeView {
     func drawSnake(in context: CGContext) {
-        viewModel.getSnakeBody().forEach { position in
+        viewModel.outputs.getSnakeBody().forEach { position in
             let rect = CGRect(x: position.currentX()*rectWidth, y: position.currentY()*rectHeight, width: rectWidth, height: rectHeight)
             self.drawSquare(at: rect, in: context)
         }
@@ -62,7 +62,7 @@ private extension PlaySnakeView {
     }
 
     func drawRedDot(in context: CGContext) {
-        let reddot = viewModel.getRedDot()
+        let reddot = viewModel.outputs.getRedDot()
         let rect = CGRect(x: reddot.currentX()*rectWidth, y: reddot.currentY()*rectHeight, width: rectWidth, height: rectHeight)
         context.saveGState()
         context.setFillColor(UIColor.red.cgColor)

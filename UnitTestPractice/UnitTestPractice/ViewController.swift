@@ -11,7 +11,7 @@ import UIKit
 class ViewController: UIViewController {
 
     private var playView: PlaySnakeView?
-    private var viewModel = PlaySnakeViewModel(speed: 1)
+    private var viewModel: PlaySnakeViewModelType?
     private let actionButton = UIButton.init(type: .custom)
 
 
@@ -25,6 +25,8 @@ class ViewController: UIViewController {
     }
 
     private func setupPlayView() {
+        viewModel = PlaySnakeViewModel(speed: 1)
+        guard let viewModel = self.viewModel else { return }
         playView = PlaySnakeView(with: viewModel)
         guard let playView = playView else { return }
         playView.delegate = self
@@ -71,34 +73,34 @@ class ViewController: UIViewController {
         guard let playView = playView else { return }
         switch gesture.direction {
         case .right:
-            playView.viewModel.changeDirection(newDirection: .right)
+            playView.viewModel.inputs.changeDirection(newDirection: .right)
             return
         case .left:
-            playView.viewModel.changeDirection(newDirection: .left)
+            playView.viewModel.inputs.changeDirection(newDirection: .left)
             return
         case .up:
-            playView.viewModel.changeDirection(newDirection: .up)
+            playView.viewModel.inputs.changeDirection(newDirection: .up)
             return
         case .down:
-            playView.viewModel.changeDirection(newDirection: .down)
+            playView.viewModel.inputs.changeDirection(newDirection: .down)
             return
         default:
-            playView.viewModel.changeDirection(newDirection: .right)
+            playView.viewModel.inputs.changeDirection(newDirection: .right)
             return
         }
     }
 
     @objc func toggleAction() {
         guard let viewModel = playView?.viewModel else { return }
-        switch viewModel.state {
+        switch viewModel.outputs.state {
         case .paused:
-            viewModel.startGame()
+            viewModel.inputs.startGame()
         case .started:
-            viewModel.pause()
+            viewModel.inputs.pause()
         case .ended:
-            viewModel.reset()
+            viewModel.inputs.reset()
         }
-        updateActionButton(with: viewModel.state)
+        updateActionButton(with: viewModel.outputs.state)
     }
 
     private func updateActionButton(with state: PlayViewState) {
@@ -115,7 +117,7 @@ class ViewController: UIViewController {
 
 extension ViewController: PlaySnakeViewDelegate {
     func endPlay(_ playView: PlaySnakeView) {
-        updateActionButton(with: playView.viewModel.state)
+        updateActionButton(with: playView.viewModel.outputs.state)
     }
 }
 

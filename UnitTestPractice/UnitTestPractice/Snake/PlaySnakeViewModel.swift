@@ -9,8 +9,8 @@
 import Foundation
 
 protocol PlaySnakeViewModelDelegate: class {
-    func refreshPlayView(_ playSnakeViewModel: PlaySnakeViewModel)
-    func endPlay(_ playSnakeViewModel: PlaySnakeViewModel)
+    func refreshPlayView(_ playSnakeViewModel: PlaySnakeViewModelType)
+    func endPlay(_ playSnakeViewModel: PlaySnakeViewModelType)
 }
 
 enum PlayViewState: Int {
@@ -19,45 +19,58 @@ enum PlayViewState: Int {
     case paused
 }
 
-class PlaySnakeViewModel {
+protocol PlaySnakeViewModelInputs {
+    func changeDirection(newDirection: Snake.Direction)
+    func startGame()
+    func pause()
+    func reset()
+    func setSnakeViewDelegate(target: PlaySnakeViewModelDelegate)
+}
+
+protocol PlaySnakeViewModelOutputs {
+    func getSnakeBody() -> [Position]
+    func getRedDot() -> Position
+    var state: PlayViewState { get }
+}
+
+protocol PlaySnakeViewModelType {
+    var inputs: PlaySnakeViewModelInputs { get }
+    var outputs: PlaySnakeViewModelOutputs { get }
+}
+
+class PlaySnakeViewModel: PlaySnakeViewModelType{
 
     private let speedUpRatio: Double = 0.8
     private var snake = Snake.empty
     private var speed: Double
     private var redDot = Position(x: -1, y: -1)
     private var timer: Timer?
-    var state: PlayViewState
+    private var gameState: PlayViewState
     weak var delegate: PlaySnakeViewModelDelegate?
+    var inputs: PlaySnakeViewModelInputs { return self }
+    var outputs: PlaySnakeViewModelOutputs { return self }
 
     init(speed: Double = 0.5) {
         self.speed = speed
-        state = .paused
+        gameState = .paused
         createNewRedDot()
     }
 
+}
+extension PlaySnakeViewModel: PlaySnakeViewModelInputs {
     func changeDirection(newDirection: Snake.Direction) {
         if abs(snake.direction.rawValue - newDirection.rawValue) == 2 { return }
         snake.direction = newDirection
         self.delegate?.refreshPlayView(self)
     }
-}
-
-extension PlaySnakeViewModel {
-    func getSnakeBody() -> [Position] {
-        return snake.body
-    }
-
-    func getRedDot() -> Position {
-        return redDot
-    }
 
     func startGame() {
-        state = .started
+        gameState = .started
         activateTimer(speedTimeInterval: TimeInterval(speed))
     }
 
     func pause() {
-        state = .paused
+        gameState = .paused
         timer?.invalidate()
         timer = nil
         delegate?.endPlay(self)
@@ -69,11 +82,29 @@ extension PlaySnakeViewModel {
         createNewRedDot()
         startGame()
     }
+
+    func setSnakeViewDelegate(target: PlaySnakeViewModelDelegate) {
+        self.delegate = target
+    }
+}
+
+extension PlaySnakeViewModel: PlaySnakeViewModelOutputs {
+    func getSnakeBody() -> [Position] {
+        return snake.body
+    }
+
+    func getRedDot() -> Position {
+        return redDot
+    }
+
+    var state: PlayViewState {
+        return gameState
+    }
 }
 
 private extension PlaySnakeViewModel {
     func end() {
-        state = .ended
+        gameState = .ended
         timer?.invalidate()
         timer = nil
         delegate?.endPlay(self)
