@@ -35,28 +35,6 @@ class PlaySnakeViewModel {
         createNewRedDot()
     }
 
-    func activateTimer(speedTimeInterval: TimeInterval) {
-        timer = Timer.scheduledTimer(withTimeInterval: speedTimeInterval, repeats: true, block: { [weak self] _ in
-            guard let self = self else { return }
-            self.moveStep()
-            self.delegate?.refreshPlayView(self)
-        })
-    }
-
-    func speedUp() {
-        timer?.invalidate()
-        timer = nil
-        speed *= speedUpRatio
-        let timeInterval = TimeInterval(speed)
-        activateTimer(speedTimeInterval: timeInterval)
-    }
-
-    func changeDirection(newDirection: Snake.Direction) {
-        if abs(snake.direction.rawValue - newDirection.rawValue) == 2 { return }
-        snake.direction = newDirection
-        self.delegate?.refreshPlayView(self)
-    }
-
     func toggleAction() {
         switch state {
         case .paused:
@@ -68,6 +46,24 @@ class PlaySnakeViewModel {
         }
     }
 
+    func changeDirection(newDirection: Snake.Direction) {
+        if abs(snake.direction.rawValue - newDirection.rawValue) == 2 { return }
+        snake.direction = newDirection
+        self.delegate?.refreshPlayView(self)
+    }
+}
+
+extension PlaySnakeViewModel {
+    func getSnakeBody() -> [Position] {
+        return snake.body
+    }
+
+    func getRedDot() -> Position {
+        return redDot
+    }
+}
+
+private extension PlaySnakeViewModel {
     func startGame() {
         state = .started
         activateTimer(speedTimeInterval: TimeInterval(speed))
@@ -86,21 +82,39 @@ class PlaySnakeViewModel {
         createNewRedDot()
         startGame()
     }
-}
 
-extension PlaySnakeViewModel {
-    func getSnakeBody() -> [Position] {
-        return snake.body
+    func speedUp() {
+        timer?.invalidate()
+        timer = nil
+        speed *= speedUpRatio
+        let timeInterval = TimeInterval(speed)
+        activateTimer(speedTimeInterval: timeInterval)
     }
 
-    func getRedDot() -> Position {
-        return redDot
-    }
-}
+    func activateTimer(speedTimeInterval: TimeInterval) {
+        timer = Timer.scheduledTimer(withTimeInterval: speedTimeInterval, repeats: true, block: { [weak self] _ in
+            guard let self = self else { return }
 
-private extension PlaySnakeViewModel {
-    func moveStep() {
-        guard let firstPosition = snake.body.first else { return }
+            let nextStep = self.moveStep()
+            let hasEatReddot = self.checkEatRedDot(nextStep)
+            let hasCollision = self.checkCollision(nextStep)
+
+            if hasCollision {
+                self.pause(with: .ended)
+                return
+            }
+            self.moveSnakeBody(to: nextStep, needRemoveLast: !hasEatReddot)
+            if hasEatReddot {
+                self.createNewRedDot()
+                self.speedUp()
+            }
+
+            self.delegate?.refreshPlayView(self)
+        })
+    }
+
+    func moveStep() -> Position? {
+        guard let firstPosition = snake.body.first else { return nil }
         var newPosition: Position
         switch snake.direction {
         case .right:
@@ -117,37 +131,36 @@ private extension PlaySnakeViewModel {
             break
         }
 
-        if checkCollision(newPosition) {
-            print("There's collision")
-            pause(with: .ended)
-            return
-        }
+        return newPosition
+    }
 
-        snake.body.insert(newPosition, at: 0)
-        if !checkEatRedDot(newPosition) {
+    func moveSnakeBody(to newPosition: Position?, needRemoveLast: Bool) {
+        guard let newBodyPosition = newPosition else { return }
+        snake.body.insert(newBodyPosition, at: 0)
+        if needRemoveLast {
             snake.body.removeLast()
         }
     }
 
-    func checkCollision(_ newPosition: Position) -> Bool {
+    func checkCollision(_ newPosition: Position?) -> Bool {
+        guard let inNewPostion = newPosition else { return true }
         var isCollision = false
 
-        if newPosition.currentY() < 0 || newPosition.currentY() > Int(PlaySnakeView.height) ||
-            newPosition.currentX() < 0 || newPosition.currentX() > Int(PlaySnakeView.width) {
+        if inNewPostion.currentY() < 0 || inNewPostion.currentY() > Int(PlaySnakeView.height) ||
+            inNewPostion.currentX() < 0 || inNewPostion.currentX() > Int(PlaySnakeView.width) {
             isCollision = true
         }
 
-        if snake.body.contains(newPosition) {
+        if snake.body.contains(inNewPostion) {
             isCollision = true
         }
 
         return isCollision
     }
 
-    func checkEatRedDot(_ headPosition: Position) -> Bool {
-        if headPosition == redDot {
-            createNewRedDot()
-            speedUp()
+    func checkEatRedDot(_ headPosition: Position?) -> Bool {
+        guard let inHeadPostion = headPosition else { return false }
+        if inHeadPostion == redDot {
             return true
         }
         return false
