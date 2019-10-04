@@ -89,8 +89,16 @@ class ViewController: UIViewController {
     }
 
     @objc func toggleAction() {
-        playView?.viewModel.toggleAction()
-        updateActionButton(with: playView?.viewModel.state ?? .started)
+        guard let viewModel = playView?.viewModel else { return }
+        switch viewModel.state {
+        case .paused:
+            viewModel.startGame()
+        case .started:
+            viewModel.pause()
+        case .ended:
+            viewModel.reset()
+        }
+        updateActionButton(with: viewModel.state)
     }
 
     private func updateActionButton(with state: PlayViewState) {

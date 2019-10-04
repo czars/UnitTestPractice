@@ -35,17 +35,6 @@ class PlaySnakeViewModel {
         createNewRedDot()
     }
 
-    func toggleAction() {
-        switch state {
-        case .paused:
-            startGame()
-        case .ended:
-            reset()
-        case .started:
-            pause(with: .paused)
-        }
-    }
-
     func changeDirection(newDirection: Snake.Direction) {
         if abs(snake.direction.rawValue - newDirection.rawValue) == 2 { return }
         snake.direction = newDirection
@@ -61,16 +50,14 @@ extension PlaySnakeViewModel {
     func getRedDot() -> Position {
         return redDot
     }
-}
 
-private extension PlaySnakeViewModel {
     func startGame() {
         state = .started
         activateTimer(speedTimeInterval: TimeInterval(speed))
     }
 
-    func pause(with state: PlayViewState) {
-        self.state = state
+    func pause() {
+        state = .paused
         timer?.invalidate()
         timer = nil
         delegate?.endPlay(self)
@@ -81,6 +68,15 @@ private extension PlaySnakeViewModel {
         speed = 0.5
         createNewRedDot()
         startGame()
+    }
+}
+
+private extension PlaySnakeViewModel {
+    func end() {
+        state = .ended
+        timer?.invalidate()
+        timer = nil
+        delegate?.endPlay(self)
     }
 
     func speedUp() {
@@ -100,7 +96,7 @@ private extension PlaySnakeViewModel {
             let hasCollision = self.checkCollision(nextStep)
 
             if hasCollision {
-                self.pause(with: .ended)
+                self.end()
                 return
             }
             self.moveSnakeBody(to: nextStep, needRemoveLast: !hasEatReddot)
@@ -130,7 +126,6 @@ private extension PlaySnakeViewModel {
             newPosition = Position(x: firstPosition.currentX(), y: firstPosition.currentY()+1)
             break
         }
-
         return newPosition
     }
 
@@ -144,18 +139,14 @@ private extension PlaySnakeViewModel {
 
     func checkCollision(_ newPosition: Position?) -> Bool {
         guard let inNewPostion = newPosition else { return true }
-        var isCollision = false
-
         if inNewPostion.currentY() < 0 || inNewPostion.currentY() > Int(PlaySnakeView.height) ||
             inNewPostion.currentX() < 0 || inNewPostion.currentX() > Int(PlaySnakeView.width) {
-            isCollision = true
+            return true
         }
-
         if snake.body.contains(inNewPostion) {
-            isCollision = true
+            return true
         }
-
-        return isCollision
+        return false
     }
 
     func checkEatRedDot(_ headPosition: Position?) -> Bool {
